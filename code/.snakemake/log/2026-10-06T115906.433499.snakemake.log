@@ -1,0 +1,7 @@
+Assuming unrestricted shared filesystem usage.
+host: hpc-cpu-214
+Building DAG of jobs...
+MissingInputException in rule all in file "/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/project/Epsilon.smk", line 18:
+Missing input files for rule all:
+    affected files:
+        fit_error_model.out

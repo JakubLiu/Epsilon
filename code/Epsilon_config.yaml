@@ -1,0 +1,14 @@
+reference_genome: "hs37d5.fa"
+negative_control_bamlist: "negative_control_bamlist_good.txt"
+loci_list: "loci_list.medium.csv"
+alt_mode: "generic"
+nranks: 8
+max_noise_level: 0.01
+tumor_bamlist: "tumor_calling_bamlist.txt"
+calling_loci_list: "loci_list.small.csv"
+variant_calling_model: "binomial"  # or "bayesian"
+fdr_method: "BH"
+alpha: 0.05
+prior: 0.3
+posterior_cutoff: 0.5
+output_vcf: "test.bayesian.vcf"

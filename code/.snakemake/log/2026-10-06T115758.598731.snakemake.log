@@ -1,0 +1,8 @@
+Assuming unrestricted shared filesystem usage.
+host: hpc-cpu-214
+Building DAG of jobs...
+MissingInputException in rule make_tumor_data in file "/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/project/Epsilon.smk", line 80:
+Missing input files for rule make_tumor_data:
+    output: .snakemake_markers/make_tumor_data.out, tumor_data/tumor_data.txt
+    affected files:
+        tumor_calling_bamlist.txt

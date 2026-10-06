@@ -3,19 +3,6 @@ library(MASS)
 library(stringr)
 library(glmmTMB)
 
-# this is for later, when the output is a VCF, for now I will just print the variant to stdout
-output_dir <- "variant_calls"
-
-if (dir.exists(output_dir)) {
-    # Remove previous fitted models and scaling parameters
-    old_files <- list.files(output_dir, full.names = TRUE)
-    if (length(old_files) > 0) {
-        file.remove(old_files)
-    }
-} else {
-    dir.create(output_dir, showWarnings = FALSE)
-}
-
 
 # =========================================================== setup command line arguments ========================================================================
 args <- commandArgs(trailingOnly = TRUE)
@@ -244,7 +231,16 @@ data <- fread(input_data, head = TRUE, sep = ',')
 data <- data[data$general_alt_counts > 0,]   # this stops potential 0 alt calling with a strong prior
 
 if (nrow(data) == 0) {
-    cat("No alternative reads found. Aborting.\n")
+    cat("No alternative reads found. Writing empty VCF.\n")
+
+    header <- c(
+        "##fileformat=VCFv4.3",
+        "##source=Epsilon",
+        "#CHROM\tPOS\tID\tREF\tALT"
+    )
+
+    writeLines(header, output_vcf)
+
     quit(save = "no", status = 0)
 }
 

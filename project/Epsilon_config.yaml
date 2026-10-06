@@ -4,9 +4,10 @@ loci_list: "loci_list.medium.csv"
 alt_mode: "generic"
 nranks: 8
 max_noise_level: 0.01
-tumor_bamlist: "tumor_calling_bamlist.txt"
+tumor_path: "tumor_calling_bamlist.txt"
+matched_normal_path: "matched_normal_path.txt"
 calling_loci_list: "loci_list.small.csv"
-variant_calling_model: "binomial"  # or "bayesian"
+variant_calling_model: "bayesian"  # or "binomial"
 fdr_method: "BH"
 alpha: 0.05
 prior: 0.3

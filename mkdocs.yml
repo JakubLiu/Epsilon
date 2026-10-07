@@ -25,6 +25,31 @@ theme:
 
 nav:
   - Home: index.md
+
   - Installation: installation.md
-  - Usage: usage.md
+
+  - Usage:
+
+      - Overview: usage/index.md
+
+      - Config file structure:
+        - reference_genome: usage/config_struct/reference_genome.md
+        - negative_control_bamlist: usage/config_struct/negative_control_bamlist.md
+        - loci_list: usage/config_struct/loci_list.md
+        - alt_mode: usage/config_struct/alt_mode.md
+        - nranks: usage/config_struct/nranks.md
+        - max_noise_level: usage/config_struct/max_noise_level.md
+        - tumor_path: usage/config_struct/tumor_path.md
+        - matched_normal_path: usage/config_struct/matched_normal_path.md
+        - calling_loci_list: usage/config_struct/calling_loci_list.md
+        - variant_calling_model: usage/config_struct/variant_calling_model.md
+        - fdr_method: usage/config_struct/fdr_method.md
+        - alpha: usage/config_struct/alpha.md
+        - prior: usage/config_struct/prior.md
+        - posterior_cutoff: usage/config_struct/posterior_cutoff.md
+        - output_vcf: usage/config_struct/output_vcf.md
+
+      - Output: usage/output.md
+  
+  - Epsilon and Slurm: slurm.md
   - Examples: examples.md

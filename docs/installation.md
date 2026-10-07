@@ -38,5 +38,5 @@ In order to satisfy all dependencies please execute the following commands:
 ```bash
 cd Epsilon
 conda env create -f env.yaml
-conda activate epsilon
+conda activate Epsilon_env
 ```

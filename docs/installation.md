@@ -1,9 +1,7 @@
-# Requirements
-
 
 # Installation
 
-After all requirements have been satisfied, install Epsilon from its repository:
+Install Epsilon from its repository:
 
 ```bash
 git clone https://github.com/JakubLiu/Epsilon.git
@@ -12,7 +10,8 @@ git clone https://github.com/JakubLiu/Epsilon.git
 After cloning the repository the following directory structure is present:
 
 ```text
-project/
+├── env.yaml
+└── project/
     ├── Epsilon.smk
     ├── Epsilon_config.yaml
     ├── run_epsilon.sh
@@ -32,4 +31,12 @@ project/
         ├── make_data_alt_specific.py
         ├── make_data_alt_specific_call.py
         └── remove_germlines.R
+```
+
+In order to satisfy all dependencies please execute the following commands:
+
+```bash
+cd Epsilon
+conda env create -f env.yaml
+conda activate epsilon
 ```

@@ -1,15 +1,46 @@
-reference_genome: "hs37d5.fa"
-negative_control_bamlist: "negative_control_bamlist_good.txt"
-loci_list: "loci_list.medium.csv"
+# Configuration file for running Epsilon
+
+# path to the reference genome
+reference_genome:
+
+# path to the text file containing paths to the bam files that make up the negative control cohort
+negative_control_bamlist:
+
+# path to the csv file containing the list of loci on which the error model will be fitted
+loci_list:
+
+# mode: 'generic' or 'specific' (default 'generic')
 alt_mode: "generic"
-nranks: 8
-max_noise_level: 0.01
-tumor_path: "tumor_calling_bamlist.txt"
-matched_normal_path: "matched_normal_path.txt"
-calling_loci_list: "loci_list.small.csv"
-variant_calling_model: "bayesian"  # or "binomial"
+
+# number of ranks (default 1)
+nranks: 1
+
+# maximum noise level, above which a locus is excluded (default 0.05)
+max_noise_level: 0.05
+
+# path to the text file that contains the path to the tumor bam file
+tumor_path:
+
+# path to the text file that contains the path to the matched normal bam file
+matched_normal_path:
+
+# path to the csv file that defines the loci in which we want to look for SNVs
+calling_loci_list:
+
+# variant calling mode 'bayesian' or 'binomial' (default 'binomial')
+variant_calling_model: "binomial"
+
+# FDR method, only applicable if the variant_calling_model is set to 'binomial'. Possible values: ["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"] (default 'BH')
 fdr_method: "BH"
+
+# signficance level, only applicable if the variant_calling_model is set to 'binomial' (default 0.05)
 alpha: 0.05
+
+# Bayesian prior, only applicable if the variant_calling_model is set to 'bayesian' (default 0.3)
 prior: 0.3
+
+# Bayesian posterior cutoff, only applicable if the variant_calling_model is set to 'bayesian' (default 0.5)
 posterior_cutoff: 0.5
-output_vcf: "test.bayesian.vcf"
+
+# name of the output vcf file
+output_vcf: "output.vcf"

@@ -1,1 +1,0 @@
-/data/cephfs-2/unmirrored/projects/relevance-based-variant-detection-liu/mapped_processed/16RHY2-N1-DNA1-WES1.processed.sorted.bam

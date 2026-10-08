@@ -1,5 +1,19 @@
+import os
+
+# set up the paths
+EPSILON_DIR = workflow.basedir
+
+SCRIPT_DIR = os.path.join(EPSILON_DIR, "scripts")
+
+MAKE_DATA = os.path.join(SCRIPT_DIR, "Epsilon_MakeData.sh")
+MAKE_DATA_CALL = os.path.join(SCRIPT_DIR, "Epsilon_MakeData_call.sh")
+FIT_MODEL = os.path.join(SCRIPT_DIR, "Epsilon_Fit.sh")
+CALL = os.path.join(SCRIPT_DIR, "Epsilon_call.sh")
+REMOVE_GERMLINES = os.path.join(SCRIPT_DIR, "remove_germlines.R")
 
 
+
+# get the params from the config
 reference_genome = config['reference_genome']
 negative_control_bamlist = config['negative_control_bamlist']
 loci_list = config['loci_list']
@@ -45,7 +59,7 @@ rule make_negative_control_data:
         dirname = 'negative_control_data'
     shell:
         """
-        scripts/Epsilon_MakeData.sh \
+        {MAKE_DATA} \
             --bamlist {params.bams} \
             --loci_list {params.loci} \
             --reference_genome {params.ref} \
@@ -71,7 +85,7 @@ rule fit_error_model:
         model_name = 'error_model'
     shell:
         """
-        scripts/Epsilon_Fit.sh \
+        {FIT_MODEL} \
             --input {input.data} \
             --noise_level {params.eps} \
             --alt_mode {params.mod} \
@@ -98,7 +112,7 @@ rule make_tumor_data:
         dirname = 'tumor_data'
     shell:
         """
-        scripts/Epsilon_MakeData_call.sh \
+        {MAKE_DATA_CALL} \
             --bamlist {input} \
             --loci_list {params.loci} \
             --reference_genome {params.ref} \
@@ -125,7 +139,7 @@ rule make_matched_normal_data:
         dirname = 'matched_normal_data'
     shell:
         """
-        scripts/Epsilon_MakeData_call.sh \
+        {MAKE_DATA_CALL} \
             --bamlist {input} \
             --loci_list {params.loci} \
             --reference_genome {params.ref} \
@@ -155,7 +169,7 @@ if variant_calling_model == "bayesian":
 
         shell:
             """
-            scripts/Epsilon_call.sh \
+            {CALL} \
                 --model fitted_error_model/error_model.rds \
                 --input tumor_data/tumor_data.txt \
                 --output {output.vcf} \
@@ -182,7 +196,7 @@ if variant_calling_model == "bayesian":
 
         shell:
             """
-            scripts/Epsilon_call.sh \
+            {CALL} \
                 --model fitted_error_model/error_model.rds \
                 --input tumor_data/matched_normal_data.txt \
                 --output {output.vcf} \
@@ -213,7 +227,7 @@ elif variant_calling_model == "binomial":
 
         shell:
             """
-            scripts/Epsilon_call.sh \
+            {CALL} \
                 --model fitted_error_model/error_model.rds \
                 --input tumor_data/tumor_data.txt \
                 --output {output.vcf} \
@@ -242,7 +256,7 @@ elif variant_calling_model == "binomial":
 
         shell:
             """
-            scripts/Epsilon_call.sh \
+            {CALL} \
                 --model fitted_error_model/error_model.rds \
                 --input tumor_data/matched_normal_data.txt \
                 --output {output.vcf} \
@@ -263,5 +277,5 @@ rule remove_germlines:
         f'filtered_variant_calls/{output_vcf}'
     shell:
         """
-        Rscript scripts/remove_germlines.R {input.all_calls} {input.germline_calls} {output}
+        Rscript {REMOVE_GERMLINES} {input.all_calls} {input.germline_calls} {output}
         """

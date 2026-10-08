@@ -1,11 +1,7 @@
 #!/usr/bin/bash
 
-
-
-
 config=""
 jobs=""
-
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -24,4 +20,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-snakemake --snakefile Epsilon.smk --configfile $config --cores $jobs
+EPSILON_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+snakemake \
+    --snakefile "$EPSILON_DIR/Epsilon.smk" \
+    --configfile "$config" \
+    --cores "$jobs"

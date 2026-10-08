@@ -50,6 +50,11 @@ nav:
         - output_vcf: usage/config_struct/output_vcf.md
 
       - Output: usage/output.md
+
   
   - Epsilon and Slurm: slurm.md
   - Examples: examples.md
+
+  - Advanced usage:
+    - Using a fitted error model: advanced_usage/epsilon_call.md
+    - Epsilon and Slurm: avanced_usage/slurm.md

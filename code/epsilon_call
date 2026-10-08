@@ -1,0 +1,28 @@
+#!/usr/bin/bash
+
+config=""
+jobs=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --config)
+            config="$2"
+            shift 2
+            ;;
+        --jobs)
+            jobs="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+EPSILON_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+snakemake \
+    --snakefile "$EPSILON_DIR/Epsilon_call.smk" \
+    --configfile "$config" \
+    --cores "$jobs"

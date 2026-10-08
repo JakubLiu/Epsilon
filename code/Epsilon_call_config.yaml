@@ -1,0 +1,40 @@
+# Configuration file for running Epsilon
+
+# path to the reference genome
+reference_genome:
+
+# path to the fitted error model (in .rds format)
+error_model:
+
+# mode: 'generic' or 'specific' (default 'generic')
+alt_mode:
+
+# number of ranks (default 1)
+nranks: 1
+
+# path to the text file that contains the path to the tumor bam file
+tumor_path:
+
+# path to the text file that contains the path to the matched normal bam file
+matched_normal_path:
+
+# path to the csv file that defines the loci in which we want to look for SNVs
+calling_loci_list:
+
+# variant calling mode 'bayesian' or 'binomial' (default 'binomial')
+variant_calling_model: "binomial"
+
+# FDR method, only applicable if the variant_calling_model is set to 'binomial'. Possible values: ["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"] (default 'BH')
+fdr_method: "BH"
+
+# signficance level, only applicable if the variant_calling_model is set to 'binomial' (default 0.05)
+alpha: 0.05
+
+# Bayesian prior, only applicable if the variant_calling_model is set to 'bayesian' (default 0.3)
+prior: 0.3
+
+# Bayesian posterior cutoff, only applicable if the variant_calling_model is set to 'bayesian' (default 0.5)
+posterior_cutoff: 0.5
+
+# name of the output vcf file
+output_vcf: "output_call.vcf"

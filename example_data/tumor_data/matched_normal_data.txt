@@ -1,0 +1,3 @@
+chrom,pos,ref,sampleID,general_alt_counts,ref_counts,alt_A,alt_C,alt_G,alt_T,coverage,mismatches,median_mapQ,median_baseQ,GGC_upstream,CGG_downstream,GGT_upstream,TGG_downstream,GC_content,ref_R1,ref_R2,alt_R1,alt_R2
+I,229637,A,patient_10.sorted.bam,0,206,0,0,0,0,206,0.233009708737864,60.0,38.0,0,0,1,1,0.41,100,106,0,0
+I,229638,T,patient_10.sorted.bam,0,203,0,0,0,0,203,0.2364532019704433,60.0,38.0,0,0,1,1,0.4,100,103,0,0

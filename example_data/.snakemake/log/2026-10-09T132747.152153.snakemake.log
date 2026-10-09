@@ -1,0 +1,67 @@
+Assuming unrestricted shared filesystem usage.
+host: hpc-cpu-40
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                             count
+----------------------------  -------
+all                                 1
+call_binomial                       1
+call_binomial_matched_normal        1
+fit_error_model                     1
+make_matched_normal_data            1
+make_negative_control_data          1
+make_tumor_data                     1
+remove_germlines                    1
+total                               8
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver, falling back to greedy scheduler. You likely have to fix your ILP solver installation. Error message: PULP_CBC_CMD: Not Available (check permissions on cbc)
+Execute 1 jobs...
+[Fri Oct  9 13:27:47 2026]
+localrule make_negative_control_data:
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt
+    output: .snakemake_markers/make_negative_control_data.out, negative_control_data/negative_control_data.txt
+    jobid: 5
+    reason: Missing output files: negative_control_data/negative_control_data.txt, .snakemake_markers/make_negative_control_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+RuleException:
+CalledProcessError in file "/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/Epsilon.smk", line 61:
+Command 'set -euo pipefail;  
+        /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/scripts/Epsilon_MakeData.sh             --bamlist /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt             --loci_list /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/loci_list.csv             --reference_genome /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/reference_genome/genome.fa             --alt_mode generic             --nranks 1             --output_prefix negative_control_data
+
+        touch .snakemake_markers/make_negative_control_data.out' returned non-zero exit status 1.
+[Fri Oct  9 13:27:49 2026]
+Error in rule make_negative_control_data:
+    message: None
+    jobid: 5
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt
+    output: .snakemake_markers/make_negative_control_data.out, negative_control_data/negative_control_data.txt
+    shell:
+        
+        /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/scripts/Epsilon_MakeData.sh             --bamlist /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt             --loci_list /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/loci_list.csv             --reference_genome /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/reference_genome/genome.fa             --alt_mode generic             --nranks 1             --output_prefix negative_control_data
+
+        touch .snakemake_markers/make_negative_control_data.out
+        
+        (command exited with non-zero exit code)
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look below for error messages
+[Fri Oct  9 13:27:49 2026]
+Error in rule make_negative_control_data:
+    message: None
+    jobid: 5
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt
+    output: .snakemake_markers/make_negative_control_data.out, negative_control_data/negative_control_data.txt
+    shell:
+        
+        /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/scripts/Epsilon_MakeData.sh             --bamlist /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt             --loci_list /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/loci_list.csv             --reference_genome /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/reference_genome/genome.fa             --alt_mode generic             --nranks 1             --output_prefix negative_control_data
+
+        touch .snakemake_markers/make_negative_control_data.out
+        
+        (command exited with non-zero exit code)
+Complete log(s): /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/.snakemake/log/2026-10-09T132747.152153.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

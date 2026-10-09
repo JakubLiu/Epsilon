@@ -1,0 +1,1 @@
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/matched_normal_sample/patient_10.sorted.bam

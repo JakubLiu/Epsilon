@@ -1,0 +1,10 @@
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_0.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_1.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_2.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_3.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_4.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_5.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_6.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_7.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_8.sorted.bam
+/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_samples/patient_9.sorted.bam

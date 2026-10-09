@@ -1,0 +1,6 @@
+##fileformat=VCFv4.3
+##source=Epsilon Binomial test mode (generic alternative reads)
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate Allele Count">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Observed Variant Allele Fraction">
+#CHROM	POS	ID	REF	ALT	PVAL_ADJ	PVAL_RAW	SIG_LEVEL	INFO

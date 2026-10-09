@@ -1,0 +1,110 @@
+Assuming unrestricted shared filesystem usage.
+host: hpc-cpu-40
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                             count
+----------------------------  -------
+all                                 1
+call_binomial                       1
+call_binomial_matched_normal        1
+fit_error_model                     1
+make_matched_normal_data            1
+make_negative_control_data          1
+make_tumor_data                     1
+remove_germlines                    1
+total                               8
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver, falling back to greedy scheduler. You likely have to fix your ILP solver installation. Error message: PULP_CBC_CMD: Not Available (check permissions on cbc)
+Execute 1 jobs...
+[Fri Oct  9 13:13:58 2026]
+localrule make_negative_control_data:
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/negative_control_bamlist.txt
+    output: .snakemake_markers/make_negative_control_data.out, negative_control_data/negative_control_data.txt
+    jobid: 5
+    reason: Missing output files: negative_control_data/negative_control_data.txt, .snakemake_markers/make_negative_control_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+[Fri Oct  9 13:14:01 2026]
+Finished jobid: 5 (Rule: make_negative_control_data)
+1 of 8 steps (12%) done
+Execute 1 jobs...
+[Fri Oct  9 13:14:01 2026]
+localrule fit_error_model:
+    input: .snakemake_markers/make_negative_control_data.out, negative_control_data/negative_control_data.txt
+    output: .snakemake_markers/fit_error_model.out
+    jobid: 4
+    reason: Missing output files: .snakemake_markers/fit_error_model.out; Input files updated by another job: negative_control_data/negative_control_data.txt, .snakemake_markers/make_negative_control_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+[Fri Oct  9 13:14:05 2026]
+Finished jobid: 4 (Rule: fit_error_model)
+2 of 8 steps (25%) done
+Execute 1 jobs...
+[Fri Oct  9 13:14:05 2026]
+localrule make_matched_normal_data:
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/matched_normal_path.txt
+    output: .snakemake_markers/make_matched_normal_data.out, tumor_data/matched_normal_data.txt
+    jobid: 7
+    reason: Missing output files: .snakemake_markers/make_matched_normal_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+[Fri Oct  9 13:14:06 2026]
+Finished jobid: 7 (Rule: make_matched_normal_data)
+3 of 8 steps (38%) done
+Execute 1 jobs...
+[Fri Oct  9 13:14:06 2026]
+localrule make_tumor_data:
+    input: /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/tumor_path.txt
+    output: .snakemake_markers/make_tumor_data.out, tumor_data/tumor_data.txt
+    jobid: 3
+    reason: Missing output files: .snakemake_markers/make_tumor_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+[Fri Oct  9 13:14:08 2026]
+Finished jobid: 3 (Rule: make_tumor_data)
+4 of 8 steps (50%) done
+Execute 1 jobs...
+[Fri Oct  9 13:14:08 2026]
+localrule call_binomial_matched_normal:
+    input: .snakemake_markers/make_matched_normal_data.out, .snakemake_markers/fit_error_model.out
+    output: unfiltered_variant_calls/matched_normal_output.vcf
+    jobid: 6
+    reason: Missing output files: unfiltered_variant_calls/matched_normal_output.vcf; Input files updated by another job: .snakemake_markers/fit_error_model.out, .snakemake_markers/make_matched_normal_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Select jobs to execute...
+[Fri Oct  9 13:14:11 2026]
+Finished jobid: 6 (Rule: call_binomial_matched_normal)
+5 of 8 steps (62%) done
+Execute 1 jobs...
+[Fri Oct  9 13:14:11 2026]
+localrule call_binomial:
+    input: .snakemake_markers/make_tumor_data.out, .snakemake_markers/fit_error_model.out
+    output: unfiltered_variant_calls/output.vcf
+    jobid: 2
+    reason: Missing output files: unfiltered_variant_calls/output.vcf; Input files updated by another job: .snakemake_markers/fit_error_model.out, .snakemake_markers/make_tumor_data.out
+    resources: tmpdir=/data/cephfs-1/home/users/jali13_c/scratch/tmp, mem_mb=32000, mem_mib=30518
+Waiting at most 5 seconds for missing files:
+unfiltered_variant_calls/output.vcf (missing locally)
+MissingOutputException in rule call_binomial in file "/data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/Epsilon.smk", line 212:
+Job 2  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+unfiltered_variant_calls/output.vcf (missing locally, parent dir contents: matched_normal_output.vcf)
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look below for error messages
+[Fri Oct  9 13:14:19 2026]
+Error in rule call_binomial:
+    message: None
+    jobid: 2
+    input: .snakemake_markers/make_tumor_data.out, .snakemake_markers/fit_error_model.out
+    output: unfiltered_variant_calls/output.vcf
+    shell:
+        
+            /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/Epsilon/code/scripts/Epsilon_call.sh                 --model fitted_error_model/error_model.rds                 --input tumor_data/tumor_data.txt                 --output unfiltered_variant_calls/output.vcf                 --mode binomial_test                 --fdr_method BH                 --alpha 0.05                 --alt_mode generic
+            
+        (command exited with non-zero exit code)
+Complete log(s): /data/cephfs-1/scratch/projects/relevance-based-variant-detection-liu/EpsilonReg_software/example_data/genomics/.snakemake/log/2026-10-09T131358.394374.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

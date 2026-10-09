@@ -229,3 +229,5 @@ Next, assuming that we saved the file above as ```epsilon_call_config.yaml```, w
 ```bash
 epsilon_call --config epsilon_call_config.yaml --jobs 1
 ```
+
+The example data used for this demo can be found in the ```example_data/``` directory in the GitHub repository.

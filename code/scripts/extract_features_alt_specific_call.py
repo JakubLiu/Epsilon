@@ -189,6 +189,13 @@ def extract_features_alt_specific(bamlist, reference_genome, loci_list, output_f
                     if base == "N":
                         continue
 
+
+                    if query_pos is None:
+                        continue
+
+                    if read.query_qualities is None:
+                        continue
+                    
                     baseq = read.query_qualities[query_pos]
                     mapq = read.mapping_quality
 

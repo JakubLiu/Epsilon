@@ -66,7 +66,7 @@ def merge_rank_outputs(outdir, output_prefix, n_ranks, delete_temp=True):
 
 
 
-def extract_features_alt_generic(bamlist, reference_genome, loci_list, output_file_prefix="output", outdir="negative_control_data", window_size=100):
+def extract_features_alt_generic(bamlist, reference_genome, loci_list, output_file_prefix="output", outdir="tumor_data", window_size=100):
 
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -191,6 +191,12 @@ def extract_features_alt_generic(bamlist, reference_genome, loci_list, output_fi
                     if base == "N":
                         continue
 
+                    if query_pos is None:
+                        continue
+
+                    if read.query_qualities is None:
+                        continue
+                    
                     baseq = read.query_qualities[query_pos]
                     mapq = read.mapping_quality
 

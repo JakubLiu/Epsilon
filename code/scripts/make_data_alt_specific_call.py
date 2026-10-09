@@ -11,10 +11,13 @@ parser.add_argument('--windowsize', type = int, default = 100)
 args = parser.parse_args()
 
 
+
+
 extf.extract_features_alt_specific(
-    bamlist = args.bamlist,
-    reference_genome = args.reference_genome,
-    loci_list = args.loci_list,
-    output_file_prefix = args.output_file_prefix,
-    window_size = args.windowsize
+    bamlist=args.bamlist,
+    reference_genome=args.reference_genome,
+    loci_list=args.loci_list,
+    output_file_prefix=args.output_file_prefix,
+    outdir="tumor_data",
+    window_size=args.windowsize
 )

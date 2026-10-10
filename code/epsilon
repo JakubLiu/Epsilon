@@ -1,24 +1,60 @@
 #!/usr/bin/bash
 
+show_help() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Run the Epsilon variant-calling pipeline using Snakemake.
+
+Options:
+  --config FILE   Path to the Epsilon configuration YAML file
+  --jobs N        Number of CPU cores to use
+  -h, --help      Show this help message and exit
+
+Example:
+  $(basename "$0") --config Epsilon_config.yaml --jobs 8
+EOF
+}
+
 config=""
 jobs=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --config)
+            if [[ -z "${2:-}" || "$2" == -* ]]; then
+                echo "Error: --config requires a file path." >&2
+                exit 1
+            fi
             config="$2"
             shift 2
             ;;
         --jobs)
+            if [[ -z "${2:-}" || "$2" == -* ]]; then
+                echo "Error: --jobs requires a number." >&2
+                exit 1
+            fi
             jobs="$2"
             shift 2
             ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
         *)
-            echo "Unknown option: $1"
+            echo "Unknown option: $1" >&2
+            echo "Use --help for usage information." >&2
             exit 1
             ;;
     esac
 done
+
+# Check required arguments
+if [[ -z "$config" || -z "$jobs" ]]; then
+    echo "Error: Both --config and --jobs are required." >&2
+    echo "Use --help for usage information." >&2
+    exit 1
+fi
 
 EPSILON_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 

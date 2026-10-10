@@ -21,3 +21,10 @@ In addition add the executable to the ```PATH``` variable (assuming you are loca
 cd code
 export PATH="$PWD:$PATH"
 ```
+
+The final step is to grant yousrself execution rights to all scripts. Assuming you are located in ```Epsilon/code/``` run the following:
+
+```bash
+chmod +x *
+chmod +x scripts/*
+```

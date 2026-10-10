@@ -44,6 +44,10 @@ And like this in the ```"specific"``` ```alt_mode```
 "7",55249071,"C","T"
 ```
 
+
+### Important
+The number of loci in the ```loci_list``` file should not be too low. This is due to the fact that the error model needs to be exposed to a sufficient 'sample size', so that the predictor variables exhibit enough variability, and hence parameter estimation is possible. For WES/WGS data and a negative control cohort comprising of 20-100 samples, around 500 loci should be enough. In theory, with a bigger negative control cohort size, fewer loci would be needed, but the cost of including more genomic locations is negligible in terms of compute time. It is therefore advised to maximize their number. This has benefits not only in terms of the parameter identifiability but also the standard error of the parameter estimates.
+
 ### other considerations
 Note that the chromosome identifiers must match the ones used in the reference genome fasta file, to which your reads have been aligned.
 For example, if the reference uses a ```chr1``` identifier for the 1st chromosome, then the same format needs to be used in your csv file.

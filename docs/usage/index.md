@@ -26,3 +26,7 @@ output_vcf: "output.vcf"
 ```
 
 For a detailed description of all the elements of the config file please look at the ```Config file structure``` subpage.
+
+
+##### Important
+The number of loci in the ```loci_list``` file should not be too low. This is due to the fact that the error model needs to be exposed to a sufficient 'sample size', so that the predictor variables exhibit enough variability, and hence parameter estimation is possible. For more information please look into ```'Config file structure'/loci_list```. 

@@ -85,7 +85,7 @@ matched_normal_path: "genomics/matched_normal_path.txt"
 calling_loci_list: "genomics/calling_loci_list.csv"
 
 # variant calling mode 'bayesian' or 'binomial' (default 'binomial')
-variant_calling_model: "binomial"
+variant_calling_model: "bayesian"
 
 # FDR method, only applicable if the variant_calling_model is set to 'binomial'. Possible values: ["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"] (default 'BH')
 fdr_method: "BH"
@@ -205,7 +205,7 @@ matched_normal_path: "genomics/matched_normal_path.txt"
 calling_loci_list: "genomics/calling_loci_list.csv"
 
 # variant calling mode 'bayesian' or 'binomial' (default 'binomial')
-variant_calling_model: "binomial"
+variant_calling_model: "bayesian"
 
 # FDR method, only applicable if the variant_calling_model is set to 'binomial'. Possible values: ["holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr"] (default 'BH')
 fdr_method: "BH"

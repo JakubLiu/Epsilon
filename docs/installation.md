@@ -28,3 +28,25 @@ The final step is to grant yousrself execution rights to all scripts. Assuming y
 chmod +x *
 chmod +x scripts/*
 ```
+
+To test the installation type:
+
+```bash
+epsilon --help
+```
+
+The following output should be printed to the standard output:
+
+```bash
+Usage: epsilon [OPTIONS]
+
+Run the Epsilon variant-calling pipeline using Snakemake.
+
+Options:
+  --config FILE   Path to the Epsilon configuration YAML file
+  --jobs N        Number of CPU cores to use
+  -h, --help      Show this help message and exit
+
+Example:
+  epsilon --config Epsilon_config.yaml --jobs 8
+```

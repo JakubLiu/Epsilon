@@ -21,6 +21,13 @@ In addition add the executable to the ```PATH``` variable (assuming you are loca
 cd code
 export PATH="$PWD:$PATH"
 ```
+Optionally you can make it permanent by applying the change to your ```.bashrc``` file:
+
+```bash
+echo 'export PATH="/absolute/path/to/your/directory:$PATH"' >> ~/.bashrc
+```
+
+Where ```/absolute/path/to/your/directory``` is the absolute path to ```Epsilon/code```.
 
 The final step is to grant yousrself execution rights to all scripts. Assuming you are located in ```Epsilon/code/``` run the following:
 

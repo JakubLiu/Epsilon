@@ -1,384 +1,287 @@
-library(data.table)
-library(MASS)
-library(stringr)
-library(glmmTMB)
+#!/usr/bin/Rscript
+
+suppressPackageStartupMessages({
+  library(data.table)
+  library(glmmTMB)
+})
 
 
-# =========================================================== setup command line arguments ========================================================================
 args <- commandArgs(trailingOnly = TRUE)
-
-# Required: fitted model RDS
-if (length(args) >= 1) {
-    fitted_model_rds <- args[1]
-} else {
-    stop("Missing required argument: fitted_model_rds")
+if (length(args) < 3L) {
+  stop(paste(
+    "Usage: Rscript epsilon_call.R model.rds input.csv output.vcf[.gz]",
+    "[binomial_test|bayes_posterior] [BH|prior] [alpha|posterior_cutoff]",
+    "[generic|specific]"
+  ))
 }
 
-# Required: input data
-if (length(args) >= 2) {
-    input_data <- args[2]
-} else {
-    stop("Missing required argument: input_data")
+model_path <- args[1]
+input_path <- args[2]
+output_path <- args[3]
+calling_mode <- if (length(args) >= 4L) args[4] else "binomial_test"
+
+if (!calling_mode %in% c("binomial_test", "bayes_posterior")) {
+  stop("calling_mode must be 'binomial_test' or 'bayes_posterior'")
 }
 
-# Required: output VCF
-if (length(args) >= 3) {
-    output_vcf <- args[3]
+if (calling_mode == "binomial_test") {
+  correction_method <- if (length(args) >= 5L) args[5] else "BH"
+  alpha <- if (length(args) >= 6L) as.numeric(args[6]) else 0.05
+  if (!correction_method %in% p.adjust.methods) {
+    stop("Unsupported p-value adjustment method: ", correction_method)
+  }
+  if (is.na(alpha) || alpha <= 0 || alpha >= 1) {
+    stop("alpha must be between 0 and 1")
+  }
 } else {
-    stop("Missing required argument: output_vcf")
+  prior <- if (length(args) >= 5L) as.numeric(args[5]) else 0.3
+  posterior_cutoff <- if (length(args) >= 6L) as.numeric(args[6]) else 0.5
+  if (is.na(prior) || prior <= 0 || prior >= 1) stop("prior must be between 0 and 1")
+  if (is.na(posterior_cutoff) || posterior_cutoff <= 0 || posterior_cutoff >= 1) {
+    stop("posterior_cutoff must be between 0 and 1")
+  }
 }
 
-# Optional: variant calling mode
-if (length(args) >= 4) {
-    variant_calling_mode <- args[4]
-} else {
-    variant_calling_mode <- "binomial_test"
+alt_mode <- if (length(args) >= 7L) args[7] else "generic"
+if (!alt_mode %in% c("specific", "generic")) {
+  stop("alt_mode must be 'specific' or 'generic'")
 }
 
-if (variant_calling_mode == "binomial_test") {
+if (!file.exists(model_path)) stop("Model file not found: ", model_path)
+if (!file.exists(input_path)) stop("Input file not found: ", input_path)
 
-    if (length(args) >= 5) {
-        multiple_testing_correction_method <- args[5]
-    } else {
-        multiple_testing_correction_method <- "BH"
+model <- readRDS(model_path)
+data <- fread(input_path, header = TRUE, sep = ",")
+
+required <- c("chrom", "pos", "sampleID", "ref", "coverage")
+missing <- setdiff(required, names(data))
+if (length(missing)) stop("Missing required input columns: ", paste(missing, collapse = ", "))
+
+
+data[, pos := suppressWarnings(as.integer(pos))]
+data[, coverage := suppressWarnings(as.numeric(coverage))]
+data <- data[
+  !is.na(chrom) & nzchar(chrom) &
+  !is.na(pos) & pos > 0 &
+  !is.na(ref) & nzchar(ref) &
+  !is.na(coverage) & coverage > 0
+]
+
+
+script_arg <- grep("^--file=", commandArgs(), value = TRUE)
+if (length(script_arg)) {
+  script_path <- sub("^--file=", "", script_arg[1])
+  script_dir <- dirname(normalizePath(script_path, mustWork = FALSE))
+  project_dir <- normalizePath(file.path(script_dir, ".."), mustWork = FALSE)
+  scaling_file <- file.path(project_dir, "fitted_error_model", "scaling_params.rds")
+  if (file.exists(scaling_file)) {
+    scaling_params <- readRDS(scaling_file)
+    scale_cols <- c("GC_content", "mismatches", "median_mapQ", "median_baseQ")
+    for (nm in scale_cols) {
+      if (nm %in% names(data) &&
+          !is.null(scaling_params[[nm]]$center) &&
+          !is.null(scaling_params[[nm]]$scale) &&
+          is.finite(scaling_params[[nm]]$scale) &&
+          scaling_params[[nm]]$scale != 0) {
+        data[[nm]] <- (data[[nm]] - scaling_params[[nm]]$center) /
+          scaling_params[[nm]]$scale
+      }
     }
-
-    if (length(args) >= 6) {
-        significance_level_alpha <- as.numeric(args[6])
-    } else {
-        significance_level_alpha <- 0.05
-    }
-
-} else if (variant_calling_mode == "bayes_posterior") {
-
-    if (length(args) >= 5) {
-        prior <- as.numeric(args[5])
-    } else {
-        prior <- 0.3
-    }
-
-    if (length(args) >= 6) {
-        posterior_cutoff <- as.numeric(args[6])
-    } else {
-        posterior_cutoff <- 0.5
-    }
-
-} else {
-    stop("variant_calling_mode must be 'binomial_test' or 'bayes_posterior'")
+  }
 }
 
-# Optional: alt mode
-if (length(args) >= 7) {
-    alt_mode <- args[7]
-} else {
-    alt_mode <- "generic"
-}
+call_one_alt <- function(d, alt_base, alt_counts, mode, model,
+                         correction_method = NULL, alpha = NULL,
+                         prior = NULL, posterior_cutoff = NULL) {
+  alt_counts <- suppressWarnings(as.numeric(alt_counts))
+  valid <- !is.na(alt_counts) & alt_counts > 0 &
+    alt_counts <= d$coverage & alt_base != d$ref
+  if (!any(valid)) return(data.table())
 
-if (!(alt_mode %in% c("specific", "generic"))) {
-    stop("alt_mode must be 'specific' or 'generic'")
-}
+  dd <- copy(d[valid])
+  ac <- alt_counts[valid]
+  eps <- as.numeric(predict(
+    model, newdata = as.data.frame(dd),
+    allow.new.levels = TRUE, type = "response"
+  ))
+  eps <- pmin(pmax(eps, 0), 1)
 
-# =======================================================================================================================================================
+  ok <- is.finite(eps) & is.finite(dd$coverage) & dd$coverage > 0
+  if (!any(ok)) return(data.table())
+  dd <- dd[ok]
+  ac <- ac[ok]
+  eps <- eps[ok]
 
+  if (mode == "binomial_test") {
+    p_raw <- pbinom(ac - 1, size = dd$coverage, prob = eps,
+                    lower.tail = FALSE)
+    p_adj <- p.adjust(p_raw, method = correction_method)
+    keep <- which(is.finite(p_adj) & p_adj < alpha)
+    if (!length(keep)) return(data.table())
 
-# ========================================================== variant calling function ===================================================================
-
-variant_calling_generic_binomial <- function(alt_base, alt_base_count){
-
-    EPS_PRED <- predict(model, newdata=data, allow.new.levels=TRUE, type='response')  # the predicted error rate
-    observed_coverage <- data$coverage
-    observed_vaf <- alt_base_count/observed_coverage
-    PVALUES <- pbinom(alt_base_count - 1, size = observed_coverage, prob = EPS_PRED, lower.tail = FALSE)
-    PVALUES_ADJUSTED <- p.adjust(PVALUES, method = multiple_testing_correction_method, n = length(PVALUES))
-    significant_idx <- which(PVALUES_ADJUSTED < significance_level_alpha)
-    sig_data <- data[significant_idx,]
-
-
-    vcf <- data.table(
-    CHROM = sig_data$chrom,
-    POS = sig_data$pos,
-    ID = sig_data$sampleID,
-    REF = sig_data$ref,
-    ALT = rep(alt_base, length(significant_idx)),
-    PVAL_ADJ = PVALUES_ADJUSTED[significant_idx],
-    PVAL_RAW = PVALUES[significant_idx],
-    SIG_LEVEL = rep(significance_level_alpha, length(significant_idx)),
-    INFO = sprintf(
-        "DP=%d;AD=%d;AF=%.6f",
-        sig_data$coverage,
-        alt_base_count[significant_idx],
-        alt_base_count[significant_idx] / sig_data$coverage
-     )
+    out <- data.table(
+      CHROM = as.character(dd$chrom[keep]),
+      POS = as.integer(dd$pos[keep]),
+      ID = as.character(dd$sampleID[keep]),
+      REF = as.character(dd$ref[keep]),
+      ALT = rep(alt_base, length(keep)),
+      QUAL = ".",
+      FILTER = "PASS",
+      INFO = sprintf(
+        "DP=%d;AD=%d;AF=%.8g;PVAL_RAW=%.8g;PVAL_ADJ=%.8g;SIG_LEVEL=%.8g",
+        as.integer(round(dd$coverage[keep])),
+        as.integer(round(ac[keep])),
+        ac[keep] / dd$coverage[keep],
+        p_raw[keep], p_adj[keep], alpha
+      )
     )
+  } else {
+    vaf <- ac / dd$coverage
+    
+    log_bf <- dbinom(ac, size = dd$coverage, prob = vaf, log = TRUE) -
+      dbinom(ac, size = dd$coverage, prob = eps, log = TRUE)
+    log_odds <- log_bf + log(prior) - log1p(-prior)
+    posterior <- plogis(log_odds)
+    keep <- which(is.finite(posterior) & posterior > posterior_cutoff)
+    if (!length(keep)) return(data.table())
 
-    return(vcf)
-}
-
-
-
-
-variant_calling_generic_bayesian <- function(alt_base, alt_base_count){
-
-    observed_coverage <- data$coverage
-    observed_vaf <- alt_base_count/observed_coverage
-    EPS_PRED <- predict(model, newdata=data, allow.new.levels=TRUE, type='response')
-    P_H0 <- dbinom(x=alt_base_count, size=observed_coverage, prob=EPS_PRED, log=TRUE)
-    P_H1 <- dbinom(x=alt_base_count, size=observed_coverage, prob=observed_vaf, log=TRUE)
-    BF <- exp(P_H1 - P_H0)
-    POSTERIOR <- BF * prior / (BF * prior + (1 - prior))
-    significant_idx <- which(POSTERIOR > posterior_cutoff)
-    sig_data <- data[significant_idx,]
-
-    vcf <- data.table(
-    CHROM = sig_data$chrom,
-    POS = sig_data$pos,
-    ID = sig_data$sampleID,
-    REF = sig_data$ref,
-    ALT = rep(alt_base, length(significant_idx)),
-    PRIOR = rep(prior, length(significant_idx)),
-    POSTERIOR = POSTERIOR[significant_idx],
-    POSTERIOR_CUTOFF = rep(posterior_cutoff, length(significant_idx)),
-    INFO = sprintf(
-        "DP=%d;AD=%d;AF=%.6f",
-        sig_data$coverage,
-        alt_base_count[significant_idx],
-        alt_base_count[significant_idx] / sig_data$coverage
-     )
+    out <- data.table(
+      CHROM = as.character(dd$chrom[keep]),
+      POS = as.integer(dd$pos[keep]),
+      ID = as.character(dd$sampleID[keep]),
+      REF = as.character(dd$ref[keep]),
+      ALT = rep(alt_base, length(keep)),
+      QUAL = ".",
+      FILTER = "PASS",
+      INFO = sprintf(
+        "DP=%d;AD=%d;AF=%.8g;PRIOR=%.8g;POSTERIOR=%.8g;POSTERIOR_CUTOFF=%.8g",
+        as.integer(round(dd$coverage[keep])),
+        as.integer(round(ac[keep])),
+        vaf[keep], prior, posterior[keep], posterior_cutoff
+      )
     )
+  }
 
-    return(vcf)
-    
+  out
 }
 
 
-variant_calling_specific_binomial <- function(){
-
-    EPS_PRED <- predict(model, newdata=data, allow.new.levels=TRUE, type='response')  # the predicted error rate
-    observed_coverage <- data$coverage
-    observed_alt_count <- data$specific_alt_counts
-    observed_vaf <- observed_alt_count/observed_coverage
-    alt <- data$alt
-    PVALUES <- pbinom(observed_alt_count - 1, size = observed_coverage, prob = EPS_PRED, lower.tail = FALSE)
-    PVALUES_ADJUSTED <- p.adjust(PVALUES, method = multiple_testing_correction_method, n = length(PVALUES))
-    significant_idx <- which(PVALUES_ADJUSTED < significance_level_alpha)
-    sig_data <- data[significant_idx,]
-    
-
-    vcf <- data.table(
-    CHROM = sig_data$chrom,
-    POS = sig_data$pos,
-    ID = sig_data$sampleID,
-    REF = sig_data$ref,
-    ALT = alt[significant_idx],
-    PVAL_ADJ = PVALUES_ADJUSTED[significant_idx],
-    PVAL_RAW = PVALUES[significant_idx],
-    SIG_LEVEL = rep(significance_level_alpha, length(significant_idx)),
-    INFO = sprintf(
-        "DP=%d;AD=%d;AF=%.6f",
-        sig_data$coverage,
-        observed_alt_count[significant_idx],
-        observed_alt_count[significant_idx] / sig_data$coverage
-     )
-    )
-
-    
-    return(vcf)
-
+if ("general_alt_counts" %in% names(data)) {
+  data <- data[!is.na(general_alt_counts) & general_alt_counts > 0]
 }
 
+results <- list()
+if (nrow(data) > 0L) {
+  if (alt_mode == "specific") {
+    needed <- c("alt", "specific_alt_counts")
+    missing <- setdiff(needed, names(data))
+    if (length(missing)) stop("Specific mode requires columns: ", paste(missing, collapse = ", "))
 
-
-variant_calling_specific_bayesian <- function(){
-
-    observed_coverage <- data$coverage
-    observed_alt_count <- data$specific_alt_counts
-    observed_vaf <- observed_alt_count/observed_coverage
-    alt <- data$alt
-    EPS_PRED <- predict(model, newdata=data, allow.new.levels=TRUE, type='response')
-    P_H0 <- dbinom(x=observed_alt_count, size=observed_coverage, prob=EPS_PRED, log=TRUE)
-    P_H1 <- dbinom(x=observed_alt_count, size=observed_coverage, prob=observed_vaf, log=TRUE)
-    BF <- exp(P_H1 - P_H0)
-    POSTERIOR <- BF * prior / (BF * prior + (1 - prior))
-    significant_idx <- which(POSTERIOR > posterior_cutoff)
-    sig_data <- data[significant_idx,]
-
-    vcf <- data.table(
-    CHROM = sig_data$chrom,
-    POS = sig_data$pos,
-    ID = sig_data$sampleID,
-    REF = sig_data$ref,
-    ALT = alt[significant_idx],
-    PRIOR = rep(prior, length(significant_idx)),
-    POSTERIOR = POSTERIOR[significant_idx],
-    POSTERIOR_CUTOFF = rep(posterior_cutoff, length(significant_idx)),
-    INFO = sprintf(
-        "DP=%d;AD=%d;AF=%.6f",
-        sig_data$coverage,
-        observed_alt_count[significant_idx],
-        observed_alt_count[significant_idx] / sig_data$coverage
-     )
-    )
-
-    return(vcf)
     
-}
-
-
-
-# =======================================================================================================================================================
-model <- readRDS(fitted_model_rds)
-data <- fread(input_data, head = TRUE, sep = ',')
-data <- data[data$general_alt_counts > 0,]   # this stops potential 0 alt calling with a strong prior
-
-if (nrow(data) == 0) {
-    cat("No alternative reads found. Writing empty VCF.\n")
-
-    header <- c(
-        "##fileformat=VCFv4.3",
-        "##source=Epsilon",
-        "#CHROM\tPOS\tID\tREF\tALT"
-    )
-
-    writeLines(header, output_vcf)
-
-    quit(save = "no", status = 0)
-}
-
-# optionally scale the predictors
-script_path <- sub("^--file=", "", commandArgs()[grep("^--file=", commandArgs())])
-script_dir <- dirname(normalizePath(script_path))
-project_dir <- normalizePath(file.path(script_dir, ".."))
-
-scaling_file <- file.path(project_dir, "fitted_error_model", "scaling_params.rds")
-
-if (file.exists(scaling_file)) {
-    
-  scaling_params <- readRDS(scaling_file)
-  data$GC_content <- (data$GC_content - scaling_params$GC_content$center) / scaling_params$GC_content$scale
-  data$mismatches <- (data$mismatches - scaling_params$mismatches$center) / scaling_params$mismatches$scale
-  data$median_mapQ <- (data$median_mapQ - scaling_params$median_mapQ$center) / scaling_params$median_mapQ$scale
-  data$median_baseQ <- (data$median_baseQ - scaling_params$median_baseQ$center) / scaling_params$median_baseQ$scale
-}
-
-
-
-if(alt_mode == 'specific'){
-    
-    if(variant_calling_mode == 'binomial_test'){
-        
-        res_vcf <- variant_calling_specific_binomial()
-        header <- c(
-            "##fileformat=VCFv4.3",
-            "##source=Epsilon Binomial test mode (specific alternative reads)",
-            '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-            '##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate Allele Count">',
-            '##INFO=<ID=AF,Number=1,Type=Float,Description="Observed Variant Allele Fraction">',
-            "#CHROM\tPOS\tID\tREF\tALT\tPVAL_ADJ\tPVAL_RAW\tSIG_LEVEL\tINFO")
-
-        writeLines(header, output_vcf)
-
-        alt_count <- as.numeric(str_extract(res_vcf$INFO, "(?<=AD=)\\d+"))
-        mask1 <- alt_count > 0
-        mask2 <- res_vcf$REF != res_vcf$ALT
-        mask3 <- nchar(res_vcf$REF) == 1
-        mask4 <- nchar(res_vcf$ALT) == 1
-        mask <- mask1 & mask2 & mask3 & mask4
-        res_vcf <- res_vcf[mask,]
-
-        fwrite(res_vcf,file = output_vcf,append = TRUE,sep = "\t",quote = FALSE,col.names = FALSE)
-
-    }else if(variant_calling_mode == 'bayes_posterior'){
-        
-        res_vcf <- variant_calling_specific_bayesian()
-        header <- c(
-            "##fileformat=VCFv4.3",
-            "##source=Epsilon Bayesian posterior mode (specific alternative reads)",
-            '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-            '##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate Allele Count">',
-            '##INFO=<ID=AF,Number=1,Type=Float,Description="Observed Variant Allele Fraction">',
-            "#CHROM\tPOS\tID\tREF\tALT\tPRIOR\tPOSTERIOR\tPOSTERIOR_CUTOFF\tINFO")
-            
-        writeLines(header, output_vcf)
-
-        alt_count <- as.numeric(str_extract(res_vcf$INFO, "(?<=AD=)\\d+"))
-        mask1 <- alt_count > 0
-        mask2 <- res_vcf$REF != res_vcf$ALT
-        mask3 <- nchar(res_vcf$REF) == 1
-        mask4 <- nchar(res_vcf$ALT) == 1
-        mask <- mask1 & mask2 & mask3 & mask4
-        res_vcf <- res_vcf[mask,]
-
-        fwrite(res_vcf,file = output_vcf,append = TRUE,sep = "\t",quote = FALSE,col.names = FALSE)
+    alts <- unique(as.character(data$alt))
+    alts <- alts[!is.na(alts) & alts %in% c("A", "C", "G", "T")]
+    for (a in alts) {
+      d <- data[as.character(alt) == a]
+      results[[length(results) + 1L]] <- call_one_alt(
+        d, a, d$specific_alt_counts, calling_mode, model,
+        correction_method, alpha,
+        if (calling_mode == "bayes_posterior") prior else NULL,
+        if (calling_mode == "bayes_posterior") posterior_cutoff else NULL
+      )
     }
+  } else {
+    count_cols <- c(A = "alt_A", C = "alt_C", G = "alt_G", T = "alt_T")
+    missing <- setdiff(unname(count_cols), names(data))
+    if (length(missing)) stop("Generic mode requires columns: ", paste(missing, collapse = ", "))
 
-   
-
-}else if (alt_mode == 'generic'){
-    
-    if(variant_calling_mode == 'binomial_test'){
-
-        res_vcf_A <- variant_calling_generic_binomial(alt_base = 'A', alt_base_count = data$alt_A)
-        res_vcf_T <- variant_calling_generic_binomial(alt_base = 'T', alt_base_count = data$alt_T)
-        res_vcf_G <- variant_calling_generic_binomial(alt_base = 'G', alt_base_count = data$alt_G)
-        res_vcf_C <- variant_calling_generic_binomial(alt_base = 'C', alt_base_count = data$alt_C)
-        res_vcf <- data.frame(rbind(res_vcf_A, res_vcf_C, res_vcf_G, res_vcf_T))
-
-         header <- c(
-            "##fileformat=VCFv4.3",
-            "##source=Epsilon Binomial test mode (generic alternative reads)",
-            '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-            '##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate Allele Count">',
-            '##INFO=<ID=AF,Number=1,Type=Float,Description="Observed Variant Allele Fraction">',
-            "#CHROM\tPOS\tID\tREF\tALT\tPVAL_ADJ\tPVAL_RAW\tSIG_LEVEL\tINFO"
-            )
-
-        writeLines(header, output_vcf)
-
-        alt_count <- as.numeric(str_extract(res_vcf$INFO, "(?<=AD=)\\d+"))
-        mask1 <- alt_count > 0
-        mask2 <- res_vcf$REF != res_vcf$ALT
-        mask3 <- nchar(res_vcf$REF) == 1
-        mask4 <- nchar(res_vcf$ALT) == 1
-        mask <- mask1 & mask2 & mask3 & mask4
-        res_vcf <- res_vcf[mask,]
-
-        fwrite(res_vcf,file = output_vcf,append = TRUE,sep = "\t",quote = FALSE,col.names = FALSE)
-
-
-
-    }else if (variant_calling_mode == 'bayes_posterior'){
-
-        res_vcf_A <- variant_calling_generic_bayesian(alt_base = 'A', alt_base_count = data$alt_A)
-        res_vcf_T <- variant_calling_generic_bayesian(alt_base = 'T', alt_base_count = data$alt_T)
-        res_vcf_G <- variant_calling_generic_bayesian(alt_base = 'G', alt_base_count = data$alt_G)
-        res_vcf_C <- variant_calling_generic_bayesian(alt_base = 'C', alt_base_count = data$alt_C)
-        res_vcf <- data.frame(rbind(res_vcf_A, res_vcf_C, res_vcf_G, res_vcf_T))
-
-        header <- c(
-            "##fileformat=VCFv4.3",
-            "##source=Epsilon Bayesian posterior mode (generic alternative reads)",
-            '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">',
-            '##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate Allele Count">',
-            '##INFO=<ID=AF,Number=1,Type=Float,Description="Observed Variant Allele Fraction">',
-            "#CHROM\tPOS\tID\tREF\tALT\tPRIOR\tPOSTERIOR\tPOSTERIOR_CUTOFF\tINFO"
-            )
-
-        writeLines(header, output_vcf)
-
-        alt_count <- as.numeric(str_extract(res_vcf$INFO, "(?<=AD=)\\d+"))
-        mask1 <- alt_count > 0
-        mask2 <- res_vcf$REF != res_vcf$ALT
-        mask3 <- nchar(res_vcf$REF) == 1
-        mask4 <- nchar(res_vcf$ALT) == 1
-        mask <- mask1 & mask2 & mask3 & mask4
-        res_vcf <- res_vcf[mask,]
-
-        fwrite(res_vcf,file = output_vcf,append = TRUE,sep = "\t",quote = FALSE,col.names = FALSE)
-
+    for (a in names(count_cols)) {
+      results[[length(results) + 1L]] <- call_one_alt(
+        data, a, data[[count_cols[[a]]]], calling_mode, model,
+        correction_method, alpha,
+        if (calling_mode == "bayes_posterior") prior else NULL,
+        if (calling_mode == "bayes_posterior") posterior_cutoff else NULL
+      )
     }
+  }
+}
+
+if (length(results)) {
+  calls <- rbindlist(results, use.names = TRUE, fill = TRUE)
+} else {
+  calls <- data.table(
+    CHROM = character(), POS = integer(), ID = character(), REF = character(),
+    ALT = character(), QUAL = character(), FILTER = character(), INFO = character()
+  )
 }
 
 
+if (nrow(calls)) {
+  calls <- calls[
+    !is.na(CHROM) & nzchar(CHROM) &
+    !is.na(POS) & POS > 0 &
+    !is.na(REF) & nzchar(REF) &
+    !is.na(ALT) & nzchar(ALT) &
+    REF != ALT
+  ]
+  setorder(calls, CHROM, POS, REF, ALT)
+  
+  calls[, ID := gsub("[[:space:];,]", "_", fifelse(is.na(ID) | ID == "", ".", ID))]
+}
+
+header <- c(
+  "##fileformat=VCFv4.3",
+  "##source=Epsilon",
+  '##FILTER=<ID=PASS,Description="All filters passed">',
+  '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">',
+  '##INFO=<ID=AD,Number=1,Type=Integer,Description="Alternate allele read count">',
+  '##INFO=<ID=AF,Number=1,Type=Float,Description="Observed alternate allele fraction">'
+)
+if (calling_mode == "binomial_test") {
+  header <- c(
+    header,
+    '##INFO=<ID=PVAL_RAW,Number=1,Type=Float,Description="Raw one-sided binomial p-value">',
+    '##INFO=<ID=PVAL_ADJ,Number=1,Type=Float,Description="Multiple-testing adjusted p-value">',
+    '##INFO=<ID=SIG_LEVEL,Number=1,Type=Float,Description="Significance threshold">'
+  )
+} else {
+  header <- c(
+    header,
+    '##INFO=<ID=PRIOR,Number=1,Type=Float,Description="Prior probability of a variant">',
+    '##INFO=<ID=POSTERIOR,Number=1,Type=Float,Description="Posterior probability of a variant">',
+    '##INFO=<ID=POSTERIOR_CUTOFF,Number=1,Type=Float,Description="Posterior calling threshold">'
+  )
+}
+header <- c(header, "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO")
 
 
+tmp_vcf <- tempfile(fileext = ".vcf")
+writeLines(header, tmp_vcf)
+if (nrow(calls)) {
+  fwrite(calls, file = tmp_vcf, append = TRUE, sep = "\t", quote = FALSE,
+         col.names = FALSE, na = ".")
+}
 
+if (grepl("\\.vcf\\.gz$", output_path, ignore.case = TRUE)) {
+  
+  if (!nzchar(Sys.which("bgzip"))) stop("Output requested as .vcf.gz, but bgzip is not on PATH")
+  if (!nzchar(Sys.which("tabix"))) stop("Output requested as .vcf.gz, but tabix is not on PATH")
+  status <- system2("bgzip", args = c("-c", shQuote(tmp_vcf)), stdout = output_path)
+  if (status != 0L) stop("bgzip failed with exit status ", status)
+  if (nrow(calls) > 0L) {
+    status <- system2("tabix", args = c("-f", "-p", "vcf", shQuote(output_path)))
+    if (status != 0L) stop("tabix indexing failed with exit status ", status)
+  } else {
+    message("No variants passed the calling threshold; wrote a valid header-only VCF.gz (no index created).")
+  }
+} else {
+  if (!grepl("\\.vcf$", output_path, ignore.case = TRUE)) {
+    warning("Output filename does not end in .vcf or .vcf.gz; writing plain-text VCF.")
+  }
+  if (!file.copy(tmp_vcf, output_path, overwrite = TRUE)) stop("Could not write output VCF: ", output_path)
+}
+
+unlink(tmp_vcf)
+message("Wrote ", nrow(calls), " variant records to ", output_path)
+if (grepl("\\.vcf\\.gz$", output_path, ignore.case = TRUE)) {
+  message("Created tabix index: ", output_path, ".tbi")
+}

@@ -1,5 +1,4 @@
-
-#!/usr/bin/env Rscript
+#!/usr/bin/Rscript
 
 library(data.table)
 

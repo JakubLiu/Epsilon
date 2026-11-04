@@ -60,4 +60,5 @@ nav:
 
   - Advanced usage:
     - Using an already fitted error model: advanced_usage/epsilon_call.md
+    - Calling variants from circulating tumor DNA (ctDNA): advanced_usage/cfDNA.md
     - Epsilon and Slurm: advanced_usage/slurm.md

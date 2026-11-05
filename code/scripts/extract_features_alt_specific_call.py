@@ -42,6 +42,18 @@ def merge_rank_outputs(outdir, output_prefix, n_ranks, delete_temp=True):
 
     merged_df = pd.concat(dfs, ignore_index=True)
 
+    if merged_df.empty:
+        print(
+            "WARNING: The merged output contains 0 rows. "
+            "No features were extracted from any rank.",
+            flush=True
+        )
+    else:
+        print(
+            f"Successfully merged {len(merged_df)} rows.",
+            flush=True
+        )
+
     merged_file = os.path.join(
         outdir,
         f"{output_prefix}.txt"
